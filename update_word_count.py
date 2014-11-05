@@ -16,12 +16,16 @@ WC_RESULT_PATTERN = re.compile('\W*(\d*)\W*\w*')
 GOAL_COUNT = 50000
 FINAL_DATE = date(2014,11,30)
 
+def isvalidfile(filename):
+   return filename[-1] != '~'
+
 def getfiles(path):
    files = []
    for f in listdir(path):
       filename = join(path, f)
       if isfile(filename):
-         files.append(filename)
+         if isvalidfile(filename):
+            files.append(filename)
       else:
          files.extend(getfiles(filename))
    return files

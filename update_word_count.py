@@ -1,10 +1,10 @@
-import json
-from datetime import date
-from datetime import timedelta
+from datetime import date, timedelta
 from os import listdir
 from os.path import isfile, join
-import subprocess
+import json
 import re
+import subprocess
+import sys
 
 WORDCOUNT_FILE_NAME = 'wordcounts.json'
 COUNT = 'count'
@@ -15,6 +15,11 @@ WC_RESULT_PATTERN = re.compile('\W*(\d*)\W*\w*')
 
 GOAL_COUNT = 50000
 FINAL_DATE = date(2014,11,30)
+
+if len(sys.argv) > 1:
+   for arg in sys.argv:
+      if arg.startswith('--path'):
+         SRC_DIR = arg[7:]
 
 def isvalidfile(filename):
    return filename[-1] != '~'

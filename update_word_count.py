@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date
 from os import listdir
 from os.path import isfile, join
 import json
@@ -14,87 +14,92 @@ SRC_DIR = 'src'
 WC_RESULT_PATTERN = re.compile('\W*(\d*)\W*\w*')
 
 GOAL_COUNT = 50000
-FINAL_DATE = date(2014,11,30)
+FINAL_DATE = date(2014, 11, 30)
 
 if len(sys.argv) > 1:
-   for arg in sys.argv:
-      if arg.startswith('--path'):
-         SRC_DIR = arg[7:]
+    for arg in sys.argv:
+        if arg.startswith('--path'):
+            SRC_DIR = arg[7:]
 
-def isvalidfile(filename):
-   return filename[-1] != '~'
+
+def is_valid_file(filename):
+    return filename[-1] != '~'
+
 
 def getfiles(path):
-   files = []
-   for f in listdir(path):
-      filename = join(path, f)
-      if isfile(filename):
-         if isvalidfile(filename):
-            files.append(filename)
-      else:
-         files.extend(getfiles(filename))
-   return files
+    files = []
+    for f in listdir(path):
+        filename = join(path, f)
+        if isfile(filename):
+            if is_valid_file(filename):
+                files.append(filename)
+        else:
+            files.extend(getfiles(filename))
+    return files
+
 
 def getcount():
-   print "Counting words..."
-   files = getfiles(SRC_DIR)
-   if len(files) == 0:
-      return 0
+    print "Counting words..."
+    files = getfiles(SRC_DIR)
+    if len(files) == 0:
+        return 0
 
-   args = ['wc', '-w']
-   args.extend(files)
-   output = subprocess.check_output(args)
-   print output
-   lines = output.splitlines()
-   return int(WC_RESULT_PATTERN.match(lines[-1]).group(1))
+    args = ['wc', '-w']
+    args.extend(files)
+    output = subprocess.check_output(args)
+    print output
+    lines = output.splitlines()
+    return int(WC_RESULT_PATTERN.match(lines[-1]).group(1))
 
-def appendcurrentcount(wordcounts, currentcount):
-   print "Adding a new word count entry for today..."
-   today = date.today()
-   wordcounts.append({DATE:today.isoformat(), ORDINAL:today.toordinal(), COUNT:currentcount})
 
-if (isfile(WORDCOUNT_FILE_NAME)):
-   with open(WORDCOUNT_FILE_NAME, 'r') as f:
-      print "Reading previous word counts..."
-      wordcounts = json.load(f)
+def append_current_count(wordcounts, currentcount):
+    print "Adding a new word count entry for today..."
+    today = date.today()
+    wordcounts.append({DATE: today.isoformat(), ORDINAL: today.toordinal(), COUNT: currentcount})
+
+
+if isfile(WORDCOUNT_FILE_NAME):
+    with open(WORDCOUNT_FILE_NAME, 'r') as f:
+        print "Reading previous word counts..."
+        wordcounts = json.load(f)
 else:
-   print 'The file {} does not exist. I\'ll create it.'.format(WORDCOUNT_FILE_NAME)
-   wordcounts = []
+    print 'The file {} does not exist. I\'ll create it.'.format(WORDCOUNT_FILE_NAME)
+    wordcounts = []
 
 lastcount = 0
 currentcount = getcount()
 
 if len(wordcounts) > 0:
-   lastentry = wordcounts[-1]
-   lastdate = date.fromordinal(lastentry[ORDINAL])
-   if (date.today() == lastdate):
-      print "You've already logged a word count today. Updating today's count..."
-      lastentry[COUNT] = currentcount
-      if (len(wordcounts) > 1):
-         lastcount = wordcounts[-2][COUNT]
-   else:
-      lastcount = lastentry[COUNT]
-      appendcurrentcount(wordcounts, currentcount)
+    lastentry = wordcounts[-1]
+    lastdate = date.fromordinal(lastentry[ORDINAL])
+    if date.today() == lastdate:
+        print "You've already logged a word count today. Updating today's count..."
+        lastentry[COUNT] = currentcount
+        if len(wordcounts) > 1:
+            lastcount = wordcounts[-2][COUNT]
+    else:
+        lastcount = lastentry[COUNT]
+        append_current_count(wordcounts, currentcount)
 else:
-   appendcurrentcount(wordcounts, currentcount)
+    append_current_count(wordcounts, currentcount)
 
 print "Saving word count..."
 with open(WORDCOUNT_FILE_NAME, 'w') as f:
-   json.dump(wordcounts, f, indent=3)
+    json.dump(wordcounts, f, indent=3)
 print "Done.\n"
 
 writtentoday = currentcount - lastcount
 wordsleft = GOAL_COUNT - currentcount
 daysleft = (FINAL_DATE - date.today()).days + 1
 if daysleft > 0:
-   perdaytoreachgoal = wordsleft / daysleft
+    per_day_to_reach_goal = wordsleft / daysleft
 else:
-   perdaytoreachgoal = wordsleft
+    per_day_to_reach_goal = wordsleft
 
 print "   Words written today: " + repr(writtentoday)
 print "Words written in total: " + repr(currentcount)
 print "      Total words left: " + repr(wordsleft)
 print "             Days left: " + repr(daysleft)
-print "  Words per day needed: " + repr(perdaytoreachgoal)
+print "  Words per day needed: " + repr(per_day_to_reach_goal)
 
 

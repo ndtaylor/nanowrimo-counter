@@ -1,10 +1,14 @@
+from argparse import ArgumentParser
 from datetime import date
 from os import listdir
 from os.path import isfile, join
 import json
 import re
 import subprocess
-import sys
+
+import dateutil.parser
+
+from date_utils import get_end_of_month, get_start_of_month
 
 WORDCOUNT_FILE_NAME = 'wordcounts.json'
 COUNT = 'count'
@@ -14,12 +18,23 @@ SRC_DIR = 'src'
 WC_RESULT_PATTERN = re.compile('\W*(\d*)\W*\w*')
 
 GOAL_COUNT = 50000
-FINAL_DATE = date(2014, 11, 30)
 
-if len(sys.argv) > 1:
-    for arg in sys.argv:
-        if arg.startswith('--path'):
-            SRC_DIR = arg[7:]
+TODAY = date.today()
+DEFAULT_START_DATE = get_start_of_month(TODAY)
+DEFAULT_END_DATE = get_end_of_month(TODAY)
+
+
+def create_parser():
+    parser = ArgumentParser()
+    parser.add_argument("-p", "--path", help="The directory or file to scan.", type=str,
+                        default='src')
+    parser.add_argument("-e", "--end-date",
+                        help="The last day of the challenge. Defaults to the end of the month.",
+                        type=str, default=DEFAULT_END_DATE.isoformat())
+    parser.add_argument("-s", "--start-date",
+                        help="The first day of the challenge. Defaults to the start of the month.",
+                        type=str, default=DEFAULT_START_DATE.isoformat())
+    return parser
 
 
 def is_valid_file(filename):
@@ -28,19 +43,19 @@ def is_valid_file(filename):
 
 def getfiles(path):
     files = []
-    for f in listdir(path):
-        filename = join(path, f)
-        if isfile(filename):
-            if is_valid_file(filename):
-                files.append(filename)
-        else:
+    if isfile(path):
+        if is_valid_file(path):
+            files.append(path)
+    else:
+        for f in listdir(path):
+            filename = join(path, f)
             files.extend(getfiles(filename))
     return files
 
 
-def getcount():
+def getcount(path):
     print "Counting words..."
-    files = getfiles(SRC_DIR)
+    files = getfiles(path)
     if len(files) == 0:
         return 0
 
@@ -58,6 +73,12 @@ def append_current_count(wordcounts, currentcount):
     wordcounts.append({DATE: today.isoformat(), ORDINAL: today.toordinal(), COUNT: currentcount})
 
 
+parser = create_parser()
+args = parser.parse_args()
+
+START_DATE = dateutil.parser.parse(args.start_date).date()
+END_DATE = dateutil.parser.parse(args.end_date).date()
+
 if isfile(WORDCOUNT_FILE_NAME):
     with open(WORDCOUNT_FILE_NAME, 'r') as f:
         print "Reading previous word counts..."
@@ -67,7 +88,7 @@ else:
     wordcounts = []
 
 lastcount = 0
-currentcount = getcount()
+currentcount = getcount(args.path)
 
 if len(wordcounts) > 0:
     lastentry = wordcounts[-1]
@@ -90,16 +111,15 @@ print "Done.\n"
 
 writtentoday = currentcount - lastcount
 wordsleft = GOAL_COUNT - currentcount
-daysleft = (FINAL_DATE - date.today()).days + 1
+daysleft = (END_DATE - TODAY).days + 1
 if daysleft > 0:
     per_day_to_reach_goal = wordsleft / daysleft
 else:
     per_day_to_reach_goal = wordsleft
 
+print "Competition time frame: {} - {}".format(START_DATE, END_DATE)
 print "   Words written today: " + repr(writtentoday)
 print "Words written in total: " + repr(currentcount)
 print "      Total words left: " + repr(wordsleft)
 print "             Days left: " + repr(daysleft)
 print "  Words per day needed: " + repr(per_day_to_reach_goal)
-
-

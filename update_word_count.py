@@ -5,9 +5,7 @@ from os.path import isfile, join
 import json
 import re
 import subprocess
-
 import dateutil.parser
-
 from date_utils import get_end_of_month, get_start_of_month
 
 WORDCOUNT_FILE_NAME = 'wordcounts.json'
@@ -26,7 +24,7 @@ DEFAULT_END_DATE = get_end_of_month(TODAY)
 
 def create_parser():
     parser = ArgumentParser()
-    parser.add_argument("-p", "--path", help="The directory or file to scan.", type=str,
+    parser.add_argument("-p", "--path", help="The directory or file to scan.", type=str, nargs='+',
                         default='src')
     parser.add_argument("-e", "--end-date",
                         help="The last day of the challenge. Defaults to the end of the month.",
@@ -41,21 +39,22 @@ def is_valid_file(filename):
     return filename[-1] != '~'
 
 
-def getfiles(path):
+def getfiles(paths):
     files = []
-    if isfile(path):
-        if is_valid_file(path):
-            files.append(path)
-    else:
-        for f in listdir(path):
-            filename = join(path, f)
-            files.extend(getfiles(filename))
+    for path in paths:
+        if isfile(path):
+            if is_valid_file(path):
+                files.append(path)
+        else:
+            for f in listdir(path):
+                filename = join(path, f)
+                files.extend(getfiles(filename))
     return files
 
 
-def getcount(path):
+def getcount(paths):
     print "Counting words..."
-    files = getfiles(path)
+    files = getfiles(paths)
     if len(files) == 0:
         return 0
 
